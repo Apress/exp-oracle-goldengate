@@ -1,0 +1,115 @@
+GGSCI (primaryserver) 1> edit params LHREMP2
+Extract LHREMP2
+-------------------------------------------------------------------
+-- Local extract for HR schema
+-------------------------------------------------------------------
+USERID GGER, PASSWORD userpw
+ExtTrail dirdat/l3
+ReportCount Every 10000 Records, Rate
+Report at 00:30
+DiscardFile dirrpt/LHREMP2.dsc, Append
+DiscardRollover at 02:00
+Table HR.*;
+
+
+GGSCI (primaryserver) > ADD EXTRACT LHREMP2, TRANLOG, BEGIN NOW
+GGSCI (primaryserver) > ADD EXTTRAIL dirdat/l3, EXTRACT LHREMP2, MEGABYTES 100
+
+
+GGSCI (primaryserver) 1> edit params PHREMP2
+Extract PHREMP2
+-------------------------------------------------------------------
+-- Data-pump Extract for HR schema
+-------------------------------------------------------------------
+PassThru
+ReportCount Every 10000 Records, Rate
+Report at 00:30
+DiscardFile dirrpt/PHREMP2.dsc, Append
+DiscardRollover at 02:00
+RmtHost standbyserver, MgrPort 7809
+RmtTrail dirdat/l4
+Table HR.* ;
+
+
+GGSCI (primaryserver) > ADD EXTRACT PHREMP2, EXTTRAILSOURCE dirdat/l3
+GGSCI (primaryserver) > ADD RMTTRAIL dirdat/l4, EXTRACT PHREMP2, MEGABYTES 100
+
+
+GGSCI (standbyserver) 1> edit params RHREMP2
+Replicat RHREMP2
+-------------------------------------------------------------------
+-- Replicat for HR Schema
+-------------------------------------------------------------------
+USERID GGER, PASSWORD userpw
+ReportCount Every 10000 Records, Rate
+Report at 00:30
+DiscardFile dirrpt/RHREMP2.dsc, Append
+DiscardRollover at 02:00
+-- HandleCollisions should be turned off after the initial load synchronization.
+HandleCollisions
+AssumeTargetDefs
+Map HR.*, Target HR.* ;
+
+
+GGSCI (standbyserver) > ADD REPLICAT RHREMP2, EXTTRAIL dirdat/l4
+
+
+GGSCI (standbyserver) 1> edit params LHREMP3
+Extract LHREMP3
+-------------------------------------------------------------------
+-- Local extract for HR schema
+-------------------------------------------------------------------
+USERID GGER, PASSWORD userpw
+ExtTrail dirdat/l5
+ReportCount Every 10000 Records, Rate
+Report at 00:30
+DiscardFile dirrpt/LHREMP3.dsc, Append
+DiscardRollover at 02:00
+Table HR.*;
+
+
+GGSCI (standbyserver) > ADD EXTRACT LHREMP3, TRANLOG, BEGIN NOW
+GGSCI (standbyserver) > ADD EXTTRAIL dirdat/l5, EXTRACT LHREMP3, MEGABYTES 100
+
+
+GGSCI (standbyserver) 1> edit params PHREMP3
+Extract PHREMP3
+-------------------------------------------------------------------
+-- Data-pump Extract for HR schema
+-------------------------------------------------------------------
+PassThru
+ReportCount Every 10000 Records, Rate
+Report at 00:30
+DiscardFile dirrpt/PHREMP3.dsc, Append
+DiscardRollover at 02:00
+RmtHost standbyserver, MgrPort 7809
+RmtTrail dirdat/l6
+Table HR.* ;
+
+
+
+GGSCI (standbyserver) > ADD EXTRACT PHREMP3, EXTTRAILSOURCE dirdat/l5
+GGSCI (standbyserver) > ADD RMTTRAIL dirdat/l6, EXTRACT PHREMP3, MEGABYTES 100
+
+
+GGSCI (primaryserver) 1> edit params RHREMP3
+Replicat RHREMP3
+-------------------------------------------------------------------
+-- Replicat for HR Schema
+-------------------------------------------------------------------
+USERID GGER, PASSWORD userpw
+ReportCount Every 10000 Records, Rate
+Report at 00:30
+DiscardFile dirrpt/RHREMP3.dsc, Append
+DiscardRollover at 02:00
+-- HandleCollisions should be turned off after the initial load synchronization.
+HandleCollisions
+AssumeTargetDefs
+Map HR.*, Target HR.* ;
+
+
+GGSCI (primaryserver) > ADD REPLICAT RHREMP3, EXTTRAIL dirdat/l6
+
+
+
+

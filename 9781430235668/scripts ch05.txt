@@ -1,0 +1,174 @@
+GGSCI (targetserver) 1> dblogin userid gger password userpw
+Successfully logged into database.
+GGSCI (targetserver) 2> add checkpointtable
+GGSCI (targetserver) 1> info checkpointtable gger.chkpt
+
+
+GGSCI (sourceserver) 1> edit params LHREMD1
+Extract LHREMD1
+-------------------------------------------------------------------
+-- Local extract for HR schema
+-------------------------------------------------------------------
+SETENV (NLS_LANG = AMERICAN_AMERICA.AL32UTF8)
+USERID GGER@SourceDB, PASSWORD userpw
+ReportCount Every 30 Minutes, Rate
+Report at 01:00
+ReportRollover at 01:15
+DiscardFile dirrpt/LHREMD1.dsc, Append
+DiscardRollover at 02:00 ON SUNDAY
+ExtTrail dirdat/l1
+Table HR.*;
+
+
+GGSCI (targetserver) 1> edit params RHREMD1
+Replicat RHREMD1
+-------------------------------------------------------------------
+-- Replicat for HR Schema
+-------------------------------------------------------------------
+SETENV (NLS_LANG = AMERICAN_AMERICA.AL32UTF8)
+USERID GGER@TargetDB, PASSWORD userpw
+AssumeTargetDefs
+ReportCount Every 30 Minutes, Rate
+Report at 01:00
+ReportRollover at 01:15
+DiscardFile dirrpt/RHREMD1.dsc, Append
+DiscardRollover at 02:00 ON SUNDAY
+Map HR.*, Target HR.* ;
+
+
+GGSCI (server) 1> edit params MGR
+-------------------------------------------------------------------
+-- GoldenGate Manager
+-------------------------------------------------------------------
+port 7840
+AutoStart ER *
+AutoRestart ER *
+PurgeOldExtracts /gger/ggs/dirdat/*, UseCheckpoints, MinKeepDays 2
+
+
+GGSCI (sourceserver) 1> encrypt password abc
+
+
+GGSCI (sourceserver) 1> edit params LHREMD1
+Extract LHREMD1
+-------------------------------------------------------------------
+-- Local extract for HR schema
+-------------------------------------------------------------------
+SETENV (NLS_LANG = AMERICAN_AMERICA.AL32UTF8)
+USERID 'GGER', PASSWORD "AACAAAAAAAAAAADAVHTDKHHCSCPIKAFB", ENCRYPTKEY default
+ReportCount Every 30 Minutes, Rate
+Report at 01:00
+ReportRollover at 01:15
+DiscardFile dirrpt/LHREMD1.dsc, Append
+DiscardRollover at 02:00 ON SUNDAY
+ENCRYPTTRAIL
+ExtTrail dirdat/l1
+Table HR.*;
+
+
+GGSCI (targetserver) 1> edit params RHREMD1
+Replicat RHREMD1
+-------------------------------------------------------------------
+-- Replicat for HR Schema
+-------------------------------------------------------------------
+SETENV (NLS_LANG = AMERICAN_AMERICA.AL32UTF8)
+USERID 'GGER', PASSWORD "AACAAAAAAAAAAADAVHTDKHHCSCPIKAFB", ENCRYPTKEY default
+AssumeTargetDefs
+ReportCount Every 30 Minutes, Rate
+Report at 01:00
+ReportRollover at 01:15
+DiscardFile dirrpt/RHREMD1.dsc, Append
+DiscardRollover at 02:00 ON SUNDAY
+DECRYPTTRAIL
+Map HR.*, Target HR.* ;
+
+
+defsfile ./dirdef/RHREMD1.defs
+USERID GGER@sourcedb, PASSWORD userpw
+TABLE HR.*;
+defgen paramfile dirprm/hrdefs.prm
+
+
+GGSCI (sourceserver) 1> edit params LHREMD1
+Extract LHREMD1
+-------------------------------------------------------------------
+-- Local extract for HR schema
+-------------------------------------------------------------------
+SETENV (NLS_LANG = AMERICAN_AMERICA.AL32UTF8)
+USERID 'GGER', PASSWORD "AACAAAAAAAAAAADAVHTDKHHCSCPIKAFB", ENCRYPTKEY default
+ReportCount Every 30 Minutes, Rate
+Report at 01:00
+ReportRollover at 01:15
+DiscardFile dirrpt/LHREMD1.dsc, Append
+DiscardRollover at 02:00 ON SUNDAY
+ENCRYPTTRAIL
+ExtTrail dirdat/l1
+Table HR.EMPLOYEES
+FILTER (ON DELETE, SALARY / 12 < 1000)
+WHERE (EMPLOYEE_ID < 100);
+Table HR.JOBS;
+
+
+GGSCI (targetserver) 1> edit params RHREMD1
+Replicat RHREMD1
+-------------------------------------------------------------------
+-- Replicat for HR Schema
+-------------------------------------------------------------------
+SETENV (NLS_LANG = AMERICAN_AMERICA.AL32UTF8)
+USERID 'GGER', PASSWORD "AACAAAAAAAAAAADAVHTDKHHCSCPIKAFB", ENCRYPTKEY default
+--AssumeTargetDefs
+SourceDefs dirdef/RHREMD1.defs
+ReportCount Every 30 Minutes, Rate
+Report at 01:00
+ReportRollover at 01:15
+DiscardFile dirrpt/RHREMD1.dsc, Append
+DiscardRollover at 02:00 ON SUNDAY
+DECRYPTTRAIL
+Map HR.EMPLOYEES, Target HR.STAFF,
+COLMAP (USEDEFAULTS,
+WAGES = @COMPUTE(SALARY * 12)
+FULL_NAME = @STRCAT(LAST_NAME,",",FIRST_NAME));
+Map HR.JOBS, Target HR.JOBS ;
+
+
+GoldenGate =
+(DESCRIPTION =
+(ADDRESS = (PROTOCOL = TCP)(HOST = sourceserver1-vip)(PORT = 1521))
+(ADDRESS = (PROTOCOL = TCP)(HOST = sourceserver2-vip)(PORT = 1521))
+(LOAD_BALANCE = NO)
+(CONNECT_DATA =
+(SERVER = DEDICATED)
+(SERVICE_NAME = GoldenGate)
+)
+)
+
+
+GGSCI (sourceserver) > ADD EXTRACT LHREMD1, TRANLOG, THREADS 2, BEGIN NOW
+
+
+ASM =
+(DESCRIPTION =
+(ADDRESS = (PROTOCOL = TCP)(HOST = sourceserver1-vip)(PORT = 1521))
+(CONNECT_DATA =
+(SERVER = DEDICATED)
+(SERVICE_NAME = +ASM1)
+(INSTANCE_NAME = +ASM1)
+)
+)
+
+
+MAP HR.EMPLOYEES, TARGET HR.EMPLOYEES, &
+REPERROR (90000, DISCARD), &
+SQLEXEC (ID checkemployee, ON UPDATE, &
+QUERY "select count(*) empduplicate from HR.EMPLOYEES where employee_id = ? and &
+employee_timestamp > ?", &
+PARAMS (p1 = employee_id, p2 = employee_timestamp), BEFOREFILTER, ERROR REPORT, &
+TRACE ALL),&
+FILTER (checkemployee.empduplicate = 0, ON UPDATE, RAISEERROR 90000);
+
+
+
+
+
+
+

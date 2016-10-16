@@ -1,0 +1,115 @@
+GGSCI (oldserver) 1> edit params LPREMP1
+Extract LPREMP1
+-------------------------------------------------------------------
+-- Local extract for PAYROLL database
+-------------------------------------------------------------------
+USERID GGER, PASSWORD userpw
+ExtTrail dirdat/p1
+ReportCount Every 10000 Records, Rate
+Report at 00:30
+DiscardFile dirrpt/LPREMP1.dsc, Append
+DiscardRollover at 02:00
+Table PAYROLL.*;
+TableExclude PAYROLL.EXCLUDETABLE1;
+TableExclude PAYROLL.EXCLUDETABLE2;
+
+
+GGSCI (oldserver) > ADD EXTRACT LPREMP1, TRANLOG, BEGIN NOW
+GGSCI (oldserver) > ADD EXTTRAIL dirdat/p1, EXTRACT LPREMP1, MEGABYTES 500
+
+
+GGSCI (oldserver) 1> edit params PPREMP1
+Extract PPREMP1
+-------------------------------------------------------------------
+-- Data-pump Extract for PAYROLL database
+-------------------------------------------------------------------
+PassThru
+ReportCount Every 10000 Records, Rate
+Report at 00:30
+DiscardFile dirrpt/PPREMP1.dsc, Append
+DiscardRollover at 02:00
+RmtHost newserver, MgrPort 7809
+RmtTrail dirdat/p2
+Table PAYROLL.*;
+TableExclude PAYROLL.EXCLUDETABLE1;
+TableExclude PAYROLL.EXCLUDETABLE2;
+
+
+GGSCI (oldserver) > ADD EXTRACT PPREMP1, EXTTRAILSOURCE dirdat/p1
+GGSCI (oldserver) > ADD RMTTRAIL dirdat/p2, EXTRACT PPREMP1, MEGABYTES 500
+
+
+GGSCI (newserver) 1> edit params RPREMP1
+Replicat RPREMP1
+-------------------------------------------------------------------
+-- Replicat for PAYROLL database
+-------------------------------------------------------------------
+USERID GGER, PASSWORD userpw
+ReportCount Every 10000 Records, Rate
+Report at 00:30
+DiscardFile dirrpt/RPREMP1.dsc, Append
+DiscardRollover at 02:00
+-- HandleCollisions should be turned off after the initial load synchronization.
+HandleCollisions
+AssumeTargetDefs
+Map PAYROLL.*, Target PAYROLL.* ;
+
+
+GGSCI (newserver) 1> edit params LPREMP2
+Extract LPREMP2
+-------------------------------------------------------------------
+-- Local extract for PAYROLL database
+-------------------------------------------------------------------
+USERID GGER, PASSWORD userpw
+ExtTrail dirdat/p3
+ReportCount Every 10000 Records, Rate
+Report at 00:30
+DiscardFile dirrpt/LPREMP2.dsc, Append
+DiscardRollover at 02:00
+Table PAYROLL.*;
+TableExclude PAYROLL.EXCLUDETABLE1;
+TableExclude PAYROLL.EXCLUDETABLE2;
+
+
+GGSCI (newserver) > ADD EXTRACT LPREMP2, TRANLOG, BEGIN NOW
+GGSCI (newserver) > ADD EXTTRAIL dirdat/p3, EXTRACT LPREMP2, MEGABYTES 500
+
+
+GGSCI (newserver) 1> edit params PPREMP2
+Extract PPREMP2
+-------------------------------------------------------------------
+-- Data-pump Extract for PAYROLL database
+-------------------------------------------------------------------
+PassThru
+ReportCount Every 10000 Records, Rate
+Report at 00:30
+DiscardFile dirrpt/PPREMP2.dsc, Append
+DiscardRollover at 02:00
+RmtHost oldserver, MgrPort 7809
+RmtTrail dirdat/p4
+Table PAYROLL.*;
+TableExclude PAYROLL.EXCLUDETABLE1;
+TableExclude PAYROLL.EXCLUDETABLE2;
+
+
+GGSCI (newserver) > ADD EXTRACT PPREMP2, EXTTRAILSOURCE dirdat/p3
+GGSCI (newserver) > ADD RMTTRAIL dirdat/p4, EXTRACT PPREMP2, MEGABYTES 500
+
+
+GGSCI (newserver) 1> edit params RPREMP2
+Replicat RPREMP2
+-------------------------------------------------------------------
+-- Replicat for PAYROLL database
+-------------------------------------------------------------------
+USERID GGER, PASSWORD userpw
+ReportCount Every 10000 Records, Rate
+Report at 00:30
+DiscardFile dirrpt/RPREMP2.dsc, Append
+DiscardRollover at 02:00
+AssumeTargetDefs
+Map PAYROLL.*, Target PAYROLL.* ;
+
+
+GGSCI (oldserver) > ADD REPLICAT RPREMP2, EXTTRAIL dirdat/p4
+
+

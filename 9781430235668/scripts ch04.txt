@@ -1,0 +1,152 @@
+SQL> SELECT SUPPLEMENTAL_LOG_DATA_MIN FROM V$DATABASE;
+
+
+SQL> ALTER DATABASE ADD SUPPLEMENTAL LOG DATA;
+
+
+GGSCI (sourceserver) 1> dblogin userid gger password userpw
+
+
+GGSCI (sourceserver) 24> dblogin sourcedb sqlserver, userid sa, password userpw
+
+
+GGSCI (sourceserver) 2> add trandata hr.employees
+
+
+SQL> select owner, log_group_name, table_name
+from dba_log_groups where owner = 'HR';
+
+
+set echo off
+set verify off
+set pagesize 2000
+set linesize 250
+set trim on
+set heading off
+set feedback off
+spool &&SCHEMA..add_trandata.obey
+select 'add trandata &SCHEMA..'||table_name
+from dba_tables where owner = '&SCHEMA' ;
+spool off
+
+
+select * from cdc.change_tables
+
+
+set echo off
+set verify off
+set pagesize 2000
+set linesize 250
+set trim on
+set heading off
+set feedback off
+spool &&SCHEMA..disable_cascade_delete_constraints.sql
+select 'alter table '||owner||'.'||table_name||
+' disable constraint '||constraint_name||';'
+from all_constraints
+where delete_rule = 'CASCADE'
+and owner = '&SCHEMA';
+spool off
+
+
+spool &SCHEMA..disable_triggers.sql
+select 'alter trigger '||owner||'.'||trigger_name||
+' disable ;'
+from all_triggers
+where owner = '&SCHEMA';
+spool off
+
+
+spool &SCHEMA..enable_cascade_delete_constraints.sql
+select 'alter table '||owner||'.'||table_name||
+' enable constraint '||constraint_name||';'
+from all_constraints
+where delete_rule = 'CASCADE'
+and owner = '&SCHEMA';
+spool off
+
+
+
+spool &SCHEMA..enable_triggers.sql
+select 'alter trigger '||owner||'.'||trigger_name||
+' enable;'
+from all_triggers
+where owner = '&SCHEMA';
+spool off
+
+
+GGSCI (sourceserver) 1> edit params LHREMD1
+Extract LHREMD1
+-------------------------------------------------------------------
+-- Local extract for HR schema
+-------------------------------------------------------------------
+SETENV (NLS_LANG = AMERICAN_AMERICA.AL32UTF8)
+USERID GGER@SourceDB, PASSWORD userpw
+ExtTrail dirdat/l1
+Table HR.*;
+
+
+SQL> select * from v$nls_parameters where parameter like '%NLS_CHARACTERSET%';
+
+
+GGSCI (sourceserver) > ADD EXTRACT LHREMD1, TRANLOG, BEGIN NOW
+GGSCI (sourceserver) > ADD EXTTRAIL dirdat/l1, EXTRACT LHREMD1, MEGABYTES 100
+
+
+GGSCI (sourceserver) 1> edit params PHREMD1
+Extract PHREMD1
+-------------------------------------------------------------------
+-- Data Pump extract for HR schema
+-------------------------------------------------------------------
+PassThru
+RmtHost targetserver, MgrPort 7840
+RmtTrail dirdat/l2
+Table HR.* ;
+
+
+GGSCI (sourceserver) > ADD EXTRACT PHREMD1, EXTTRAILSOURCE dirdat/l1
+GGSCI (sourceserver) > ADD RMTTRAIL dirdat/l2, EXTRACT PHREMD1, MEGABYTES 100
+
+
+GGSCI (sourceserver) 1> edit params IHREMD1
+Extract IHREMD1
+-------------------------------------------------------------------
+-- Initial Load extract for HR schema
+-------------------------------------------------------------------
+SETENV (NLS_LANG = AMERICAN_AMERICA.AL32UTF8)
+USERID GGER@SourceDB, PASSWORD userpw
+RmtHost targetserver, mgrport 7840
+RmtTask Replicat, Group DHREMD1
+Table HR.*;
+
+
+GGSCI (sourceserver) > ADD EXTRACT IHREMD1, SOURCEISTABLE
+
+
+GGSCI (targetserver) 1> edit params DHREMD1
+Replicat DHREMD1
+-------------------------------------------------------------------
+-- Initial load replicat for HR schema
+-------------------------------------------------------------------
+SETENV (NLS_LANG = AMERICAN_AMERICA.AL32UTF8)
+USERID GGER@TargetDB, PASSWORD userpw
+AssumeTargetDefs
+Map HR.*, Target HR.* ;
+
+
+GGSCI (targetserver) > ADD REPLICAT DHREMD1, SPECIALRUN
+
+
+GGSCI (targetserver) 1> edit params RHREMD1
+Replicat RHREMD1
+-------------------------------------------------------------------
+-- Replicat for HR Schema
+-------------------------------------------------------------------
+SETENV (NLS_LANG = AMERICAN_AMERICA.AL32UTF8)
+USERID GGER@TargetDB, PASSWORD userpw
+HandleCollisions
+AssumeTargetDefs
+Map HR.*, Target HR.* ;
+
+
+GGSCI (targetserver) > ADD REPLICAT RHREMD1, EXTTRAIL dirdat/l2

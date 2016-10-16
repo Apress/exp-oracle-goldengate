@@ -1,0 +1,153 @@
+GGSCI (sourceserver) 1> edit params PHREMD1
+Extract PHREMD1
+-------------------------------------------------------------------
+-- Data Pump extract for HR schema
+-------------------------------------------------------------------
+PassThru
+RmtHost targetserver, MgrPort 7809
+RmtTrail dirdat/l2
+ReportCount Every 10000 Records, Rate
+Report at 01:00
+ReportRollover at 01:15
+DiscardFile dirrpt/PHREMD1.dsc, Append
+DiscardRollover at 01:00
+Table HR.EMPLOYEES ;
+Table HR.JOBS ;
+Table HR.JOB_HISTORY ;
+Table HR.LOCATIONS ;
+Table HR.DEPARTMENTS ;
+
+
+GGSCI (sourceserver) 1> edit params PHREMD2
+Extract PHREMD2
+-------------------------------------------------------------------
+-- Data Pump extract for HR schema
+-------------------------------------------------------------------
+PassThru
+RmtHost targetserver, MgrPort 7809
+RmtTrail dirdat/l3
+ReportCount Every 10000 Records, Rate
+Report at 01:00
+ReportRollover at 01:15
+DiscardFile dirrpt/PHREMD2.dsc, Append
+DiscardRollover at 01:00
+Table HR.COUNTRIES;
+Table HR.REGIONS;
+
+
+GGSCI (targetserver) 1> edit params RHREMD1
+Replicat RHREMD1
+-------------------------------------------------------------------
+-- Replicat for HR Schema
+-------------------------------------------------------------------
+USERID 'GGER', PASSWORD "AACAAAAAAAAAAADAVHTDKHHCSCPIKAFB", ENCRYPTKEY default
+AssumeTargetDefs
+ReportCount Every 30 Minutes, Rate
+Report at 01:00
+ReportRollover at 01:15
+DiscardFile dirrpt/RHREMD1.dsc, Append
+DiscardRollover at 02:00 ON SUNDAY
+Map HR.EMPLOYEES, Target HR.EMPLOYEES;
+Map HR.JOBS, Target HR.JOBS;
+Map HR.JOB_HISTORY, Target HR.JOB_HISTORY;
+Map HR.LOCATIONS, Target HR.LOCATIONS;
+Map HR.DEPARTMENTS, Target HR.DEPARTMENTS;
+
+
+
+GGSCI (targetserver) 1> edit params RHREMD2
+Replicat RHREMD2
+-------------------------------------------------------------------
+-- Replicat for HR Schema
+-------------------------------------------------------------------
+USERID 'GGER', PASSWORD "AACAAAAAAAAAAADAVHTDKHHCSCPIKAFB", ENCRYPTKEY default
+AssumeTargetDefs
+ReportCount Every 30 Minutes, Rate
+Report at 01:00
+ReportRollover at 01:15
+DiscardFile dirrpt/RHREMD2.dsc, Append
+DiscardRollover at 02:00 ON SUNDAY
+Map HR.COUNTRIES, Target HR.COUNTRIES;
+Map HR.REGIONS, Target HR.REGIONS;
+
+
+GGSCI (sourceserver) > ADD EXTRACT PHREMD2, EXTTRAILSOURCE dirdat/l1,
+EXTSEQNO 18, EXTRBA 8144
+GGSCI (sourceserver) > ADD RMTTRAIL dirdat/l3, EXTRACT PHREMD2, MEGABYTES 100
+GGSCI (targetserver) > ADD REPLICAT RHREMD2, EXTTRAIL dirdat/l3
+
+
+
+GGSCI (targetserver) > edit params RHREMD1
+Replicat RHREMD1
+-------------------------------------------------------------------
+-- Replicat for HR Schema
+-------------------------------------------------------------------
+USERID 'GGER', PASSWORD "AACAAAAAAAAAAADAVHTDKHHCSCPIKAFB", ENCRYPTKEY default
+AssumeTargetDefs
+ReportCount Every 30 Minutes, Rate
+Report at 01:00
+ReportRollover at 01:15
+DiscardFile dirrpt/RHREMD1.dsc, Append
+DiscardRollover at 02:00 ON SUNDAY
+Map HR.EMPLOYEES, Target HR.EMPLOYEES,COLMAP (USEDEFAULTS), FILTER (@RANGE (1,3));
+Map HR.JOBS, Target HR.JOBS,COLMAP (USEDEFAULTS), FILTER (@RANGE (1,3));
+Map HR.JOB_HISTORY, Target HR.JOB_HISTORY,COLMAP (USEDEFAULTS),
+FILTER (@RANGE (1,3));
+Map HR.LOCATIONS, Target HR.LOCATIONS,COLMAP (USEDEFAULTS), FILTER (@RANGE (1,3));
+Map HR.DEPARTMENTS, Target HR.DEPARTMENTS,COLMAP (USEDEFAULTS),
+FILTER (@RANGE (1,3));
+Map HR.COUNTRIES, Target HR.COUNTRIES,COLMAP (USEDEFAULTS), FILTER (@RANGE (1,3));
+Map HR.REGIONS, Target HR.REGIONS,COLMAP (USEDEFAULTS), FILTER (@RANGE (1,3));
+
+
+GGSCI (targetserver) > edit params RHREMD2
+Replicat RHREMD2
+-------------------------------------------------------------------
+-- Replicat for HR Schema
+-------------------------------------------------------------------
+USERID 'GGER', PASSWORD "AACAAAAAAAAAAADAVHTDKHHCSCPIKAFB", ENCRYPTKEY default
+AssumeTargetDefs
+ReportCount Every 30 Minutes, Rate
+Report at 01:00
+ReportRollover at 01:15
+DiscardFile dirrpt/RHREMD2.dsc, Append
+DiscardRollover at 02:00 ON SUNDAY
+Map HR.EMPLOYEES, Target HR.EMPLOYEES,COLMAP (USEDEFAULTS), FILTER (@RANGE (2,3));
+Map HR.JOBS, Target HR.JOBS,COLMAP (USEDEFAULTS), FILTER (@RANGE (2,3));
+Map HR.JOB_HISTORY, Target HR.JOB_HISTORY,COLMAP (USEDEFAULTS),
+FILTER (@RANGE (2,3));
+Map HR.LOCATIONS, Target HR.LOCATIONS,COLMAP (USEDEFAULTS), FILTER (@RANGE (2,3));
+Map HR.DEPARTMENTS, Target HR.DEPARTMENTS,COLMAP (USEDEFAULTS),
+FILTER (@RANGE (2,3));
+Map HR.COUNTRIES, Target HR.COUNTRIES,COLMAP (USEDEFAULTS), FILTER (@RANGE (2,3));
+Map HR.REGIONS, Target HR.REGIONS,COLMAP (USEDEFAULTS), FILTER (@RANGE (2,3));
+
+
+GGSCI (targetserver) > edit params RHREMD3
+Replicat RHREMD2
+-------------------------------------------------------------------
+-- Replicat for HR Schema
+-------------------------------------------------------------------
+USERID 'GGER', PASSWORD "AACAAAAAAAAAAADAVHTDKHHCSCPIKAFB", ENCRYPTKEY default
+AssumeTargetDefs
+ReportCount Every 30 Minutes, Rate
+Report at 01:00
+ReportRollover at 01:15
+DiscardFile dirrpt/RHREMD3.dsc, Append
+DiscardRollover at 02:00 ON SUNDAY
+Map HR.EMPLOYEES, Target HR.EMPLOYEES,COLMAP (USEDEFAULTS), FILTER (@RANGE (3,3));
+Map HR.JOBS, Target HR.JOBS,COLMAP (USEDEFAULTS), FILTER (@RANGE (3,3));
+Map HR.JOB_HISTORY, Target HR.JOB_HISTORY,COLMAP (USEDEFAULTS),
+FILTER (@RANGE (3,3));
+Map HR.LOCATIONS, Target HR.LOCATIONS,COLMAP (USEDEFAULTS), FILTER (@RANGE (3,3));
+Map HR.DEPARTMENTS, Target HR.DEPARTMENTS,COLMAP (USEDEFAULTS),
+FILTER (@RANGE (3,3));
+Map HR.COUNTRIES, Target HR.COUNTRIES,COLMAP (USEDEFAULTS), FILTER (@RANGE (3,3));
+Map HR.REGIONS, Target HR.REGIONS,COLMAP (USEDEFAULTS), FILTER (@RANGE (3,3));
+
+GGSCI (targetserver) > ADD REPLICAT RHREMD2, EXTTRAIL dirdat/l2,
+EXTSEQNO 13, EXTRBA 2351
+GGSCI (targetserver) > ADD REPLICAT RHREMD3, EXTTRAIL dirdat/l2,
+EXTSEQNO 13, EXTRBA 2351
+
